@@ -1,5 +1,3 @@
-let debounceTimeout;
-
 async function search() {
     const searchBox = document.getElementById("searchBox");
     const query = searchBox.value.toLowerCase();
@@ -11,16 +9,20 @@ async function search() {
 
     try {
         const response = await fetch('./csv/journal_data.csv');
-        if (!response.ok) throw new Error("Failed to fetch data.");
-        const data = await response.text();
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
 
+        const data = await response.text();
         const rows = data.split('\n').slice(1); // Skip header row
         const results = rows
             .map(row => {
-                const [year, page, text] = row.split(',');
+                const fields = row.split(',');
+                if (fields.length < 3) return null; // Skip malformed rows
+                const [year, page, text] = fields;
                 return { year, page, text };
             })
-            .filter(entry => entry.text.toLowerCase().includes(query));
+            .filter(entry => entry && entry.text && entry.text.toLowerCase().includes(query)); // Filter valid entries
 
         resultsDiv.innerHTML = results.length
             ? results.map(entry => `
@@ -31,14 +33,9 @@ async function search() {
             `).join("")
             : "No results found.";
     } catch (error) {
+        console.error("Error during fetch or processing:", error);
         resultsDiv.innerHTML = "Error loading results.";
-        console.error(error);
     } finally {
         loadingIndicator.style.display = "none";
     }
 }
-
-document.getElementById("searchBox").addEventListener("input", () => {
-    clearTimeout(debounceTimeout);
-    debounceTimeout = setTimeout(search, 300); // Adjust debounce delay as needed
-});
