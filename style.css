@@ -1,0 +1,36 @@
+header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    background-color: #f4f4f4;
+}
+
+header input {
+    margin-bottom: 10px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.result {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.result img {
+    max-width: 100%;
+    width: 150px;
+    height: auto;
+}
+
+@media (min-width: 600px) {
+    main {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+}
