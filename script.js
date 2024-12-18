@@ -24,27 +24,20 @@ async function search() {
             })
             .filter(entry => entry && entry.text && entry.text.toLowerCase().includes(query))
             .map(entry => {
-                // Split the text into sentences and find where the query matches
-                const sentences = entry.text.split(/(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|\!)(?:\s+)/);
-                const matchIndex = sentences.findIndex(sentence => sentence.toLowerCase().includes(query));
-                if (matchIndex === -1) return null; // No match
-
-                // Collect preceding, matching, and succeeding sentences
-                const preceding = sentences[matchIndex - 1] || "";
-                const matching = sentences[matchIndex] || "";
-                const succeeding = sentences[matchIndex + 1] || "";
-
-                entry.displayText = `${preceding} ${matching} ${succeeding}`.trim();
-                entry.fullParagraph = sentences.join(" ");
+                // Highlight the search terms in the text
+                const highlightedText = entry.text.replace(
+                    new RegExp(query, 'gi'),
+                    match => `<span class="highlight">${match}</span>`
+                );
+                entry.highlightedText = highlightedText;
                 return entry;
-            })
-            .filter(entry => entry); // Remove null entries
+            });
 
         resultsDiv.innerHTML = results.length
             ? results.map(entry => `
                 <div class="result">
-                    <img src="./images/${entry.year}_page_${entry.page}.png" class="thumbnail" alt="Page Image" data-fulltext="${entry.fullParagraph}">
-                    <p>${entry.year}, Page ${entry.page}: ${entry.displayText}</p>
+                    <img src="./images/${entry.year}_page_${entry.page}.png" class="thumbnail" alt="Page Image" data-fulltext="${entry.text}" data-highlightedtext="${entry.highlightedText}">
+                    <p>${entry.year}, Page ${entry.page}: ${entry.text}</p>
                 </div>
             `).join("")
             : "No results found.";
@@ -53,13 +46,14 @@ async function search() {
         document.querySelectorAll(".thumbnail").forEach(img => {
             img.addEventListener("click", event => {
                 const fullText = event.target.getAttribute("data-fulltext");
+                const highlightedText = event.target.getAttribute("data-highlightedtext");
                 const modal = document.createElement("div");
                 modal.className = "modal";
                 modal.innerHTML = `
                     <div class="modal-content">
                         <span class="close">&times;</span>
-                        <img src="${event.target.src}" class="large-image">
-                        <p>${fullText}</p>
+                        <img src="${event.target.src}" class="large-image" alt="Large Image">
+                        <p class="modal-text">${highlightedText}</p>
                     </div>
                 `;
                 document.body.appendChild(modal);
