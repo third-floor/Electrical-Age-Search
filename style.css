@@ -1,9 +1,10 @@
-.result img {
-    max-width: 300px; /* Adjust thumbnail size */
-    max-height: auto;
-    cursor: pointer;
+/* Highlighted search term */
+.highlight {
+    background-color: lightblue;
+    font-weight: bold;
 }
 
+/* Modal styles */
 .modal {
     position: fixed;
     top: 0;
@@ -25,12 +26,20 @@
     max-width: 90%;
     max-height: 90%;
     overflow-y: auto;
+    position: relative;
 }
 
 .modal-content .large-image {
     max-width: 100%;
     height: auto;
     margin-bottom: 20px;
+}
+
+.modal-content .modal-text {
+    text-align: left;
+    font-size: 16px;
+    line-height: 1.5;
+    margin-top: 20px;
 }
 
 .modal-content .close {
