@@ -8,7 +8,7 @@ async function search() {
     loadingIndicator.style.display = "block";
 
     try {
-        const response = await fetch('./csv/journal_data.csv');
+        const response = await fetch('./csv/journal_data_links.csv'); // Updated to new CSV file
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
@@ -18,13 +18,12 @@ async function search() {
         const results = rows
             .map(row => {
                 const fields = row.split(',');
-                if (fields.length < 3) return null; // Skip malformed rows
-                const [year, page, text] = fields;
-                return { year, page, text };
+                if (fields.length < 4) return null; // Skip malformed rows
+                const [year, page, text, link] = fields;
+                return { year, page, text, link };
             })
             .filter(entry => entry && entry.text && entry.text.toLowerCase().includes(query))
             .map(entry => {
-                // Highlight the search terms in the text
                 const highlightedText = entry.text.replace(
                     new RegExp(query, 'gi'),
                     match => `<span class="highlight">${match}</span>`
@@ -33,37 +32,52 @@ async function search() {
                 return entry;
             });
 
-        resultsDiv.innerHTML = results.length
-            ? results.map(entry => `
-                <div class="result">
-                    <img src="./images/${entry.year}_page_${entry.page}.png" class="thumbnail" alt="Page Image" data-fulltext="${entry.text}" data-highlightedtext="${entry.highlightedText}">
-                    <p>${entry.year}, Page ${entry.page}: ${entry.text}</p>
-                </div>
-            `).join("")
-            : "No results found.";
+        const totalResults = results.length;
+        if (totalResults === 0) {
+            resultsDiv.innerHTML = "No results found.";
+            return;
+        }
 
-        // Add click event listener for thumbnails
-        document.querySelectorAll(".thumbnail").forEach(img => {
-            img.addEventListener("click", event => {
-                const fullText = event.target.getAttribute("data-fulltext");
-                const highlightedText = event.target.getAttribute("data-highlightedtext");
-                const modal = document.createElement("div");
-                modal.className = "modal";
-                modal.innerHTML = `
-                    <div class="modal-content">
-                        <span class="close">&times;</span>
-                        <img src="${event.target.src}" class="large-image" alt="Large Image">
-                        <p class="modal-text">${highlightedText}</p>
+        let currentPage = 1;
+        const resultsPerPage = 20;
+        const totalPages = Math.ceil(totalResults / resultsPerPage);
+
+        function renderPage(page) {
+            const startIndex = (page - 1) * resultsPerPage;
+            const endIndex = Math.min(startIndex + resultsPerPage, totalResults);
+
+            const pageResults = results.slice(startIndex, endIndex);
+            resultsDiv.innerHTML = `
+                <p>Found ${totalResults} results. Displaying ${startIndex + 1} - ${endIndex}.</p>
+                ${pageResults.map(entry => `
+                    <div class="result">
+                        <img src="${entry.link}" class="thumbnail" alt="Page Image">
+                        <p>${entry.year}, Page ${entry.page}: ${entry.highlightedText}</p>
                     </div>
-                `;
-                document.body.appendChild(modal);
+                `).join("")}
+                <div class="pagination">
+                    ${currentPage > 1 ? '<button id="prevPage">Previous</button>' : ''}
+                    ${currentPage < totalPages ? '<button id="nextPage">Next</button>' : ''}
+                </div>
+            `;
 
-                // Close modal functionality
-                modal.querySelector(".close").addEventListener("click", () => {
-                    modal.remove();
+            if (currentPage > 1) {
+                document.getElementById("prevPage").addEventListener("click", () => {
+                    currentPage--;
+                    renderPage(currentPage);
                 });
-            });
-        });
+            }
+
+            if (currentPage < totalPages) {
+                document.getElementById("nextPage").addEventListener("click", () => {
+                    currentPage++;
+                    renderPage(currentPage);
+                });
+            }
+        }
+
+        renderPage(currentPage);
+
     } catch (error) {
         console.error("Error during fetch or processing:", error);
         resultsDiv.innerHTML = "Error loading results.";
@@ -71,6 +85,7 @@ async function search() {
         loadingIndicator.style.display = "none";
     }
 }
+
 
 async function loadTableOfContents() {
     const tocContainer = document.getElementById("tocContainer");
