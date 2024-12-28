@@ -20,7 +20,7 @@ async function search() {
                 const fields = row.split(',');
                 if (fields.length < 4) return null; // Skip malformed rows
                 const [year, page, text, link] = fields;
-                return { year, page, text, link: convertGoogleDriveLink(link) }; // Convert Google Drive links
+                return { year, page, text, link }; // Use link directly from the CSV
             })
             .filter(entry => entry); // Remove null values
 
@@ -43,8 +43,6 @@ async function search() {
         const resultsPerPage = 20;
         const totalPages = Math.ceil(totalResults / resultsPerPage);
 
-        const placeholderImage = "./images/placeholder.png"; // Fallback image
-
         function renderPage(page) {
             const startIndex = (page - 1) * resultsPerPage;
             const endIndex = Math.min(startIndex + resultsPerPage, totalResults);
@@ -54,7 +52,7 @@ async function search() {
                 <p>Found ${totalResults} results. Displaying ${startIndex + 1} - ${endIndex}.</p>
                 ${pageResults.map(entry => `
                     <div class="result">
-                        <img src="${entry.link || placeholderImage}" class="thumbnail" alt="Page Image" onerror="this.src='${placeholderImage}'">
+                        <img src="${entry.link}" class="thumbnail" alt="Page Image" style="display: none;" onload="this.style.display='block';">
                         <p>${entry.year}, Page ${entry.page}: ${highlightQuery(entry.text, query)}</p>
                     </div>
                 `).join("")}
@@ -89,20 +87,12 @@ async function search() {
     }
 }
 
-// Helper function to convert Google Drive links to direct links
-function convertGoogleDriveLink(link) {
-    if (!link.includes('drive.google.com')) {
-        return link; // Return non-Google Drive links as-is
-    }
-    const fileIdMatch = link.match(/file\/d\/([^\/]*)/);
-    return fileIdMatch ? `https://drive.google.com/uc?id=${fileIdMatch[1]}` : link;
-}
-
 // Helper function to highlight query in text
 function highlightQuery(text, query) {
     const regex = new RegExp(query, 'gi');
     return text.replace(regex, match => `<span class="highlight">${match}</span>`);
 }
+
 
 
 async function loadTableOfContents() {
