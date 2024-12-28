@@ -18,9 +18,9 @@ async function search() {
         const entries = rows
             .map(row => {
                 const fields = row.split(',');
-                if (fields.length < 4) return null; // Skip malformed rows
-                const [year, page, text, link] = fields;
-                return { year, page, text, link }; // Use link directly from the CSV
+                if (fields.length < 7) return null; // Skip malformed rows
+                const [year, filename, pageNumber, text, pageNumber1, filename1, link] = fields;
+                return { year, page: pageNumber, text, link }; // Corrected to match CSV headers
             })
             .filter(entry => entry); // Remove null values
 
@@ -86,6 +86,13 @@ async function search() {
         loadingIndicator.style.display = "none";
     }
 }
+
+// Helper function to highlight query in text
+function highlightQuery(text, query) {
+    const regex = new RegExp(query, 'gi');
+    return text.replace(regex, match => `<span class="highlight">${match}</span>`);
+}
+
 
 // Helper function to highlight query in text
 function highlightQuery(text, query) {
