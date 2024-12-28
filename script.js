@@ -8,39 +8,42 @@ async function search() {
     loadingIndicator.style.display = "block";
 
     try {
-        const response = await fetch('./csv/journal_data_links.csv'); // Updated to new CSV file
+        const response = await fetch('./csv/journal_data_links.csv'); // Fetch the updated CSV file
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
         const data = await response.text();
         const rows = data.split('\n').slice(1); // Skip header row
-        const results = rows
+        const entries = rows
             .map(row => {
                 const fields = row.split(',');
                 if (fields.length < 4) return null; // Skip malformed rows
                 const [year, page, text, link] = fields;
-                return { year, page, text, link };
+                return { year, page, text, link: convertGoogleDriveLink(link) }; // Convert Google Drive links
             })
-            .filter(entry => entry && entry.text && entry.text.toLowerCase().includes(query))
-            .map(entry => {
-                const highlightedText = entry.text.replace(
-                    new RegExp(query, 'gi'),
-                    match => `<span class="highlight">${match}</span>`
-                );
-                entry.highlightedText = highlightedText;
-                return entry;
-            });
+            .filter(entry => entry); // Remove null values
 
-        const totalResults = results.length;
-        if (totalResults === 0) {
+        // Perform fuzzy search
+        const fuse = new Fuse(entries, {
+            keys: ['text'], // Field to search
+            includeScore: true, // Include score for ranking
+            threshold: 0.4 // Adjust for strictness of matching (lower = stricter)
+        });
+
+        const results = fuse.search(query).map(result => result.item); // Extract matched items
+
+        if (results.length === 0) {
             resultsDiv.innerHTML = "No results found.";
             return;
         }
 
+        const totalResults = results.length;
         let currentPage = 1;
         const resultsPerPage = 20;
         const totalPages = Math.ceil(totalResults / resultsPerPage);
+
+        const placeholderImage = "./images/placeholder.png"; // Fallback image
 
         function renderPage(page) {
             const startIndex = (page - 1) * resultsPerPage;
@@ -51,8 +54,8 @@ async function search() {
                 <p>Found ${totalResults} results. Displaying ${startIndex + 1} - ${endIndex}.</p>
                 ${pageResults.map(entry => `
                     <div class="result">
-                        <img src="${entry.link}" class="thumbnail" alt="Page Image">
-                        <p>${entry.year}, Page ${entry.page}: ${entry.highlightedText}</p>
+                        <img src="${entry.link || placeholderImage}" class="thumbnail" alt="Page Image" onerror="this.src='${placeholderImage}'">
+                        <p>${entry.year}, Page ${entry.page}: ${highlightQuery(entry.text, query)}</p>
                     </div>
                 `).join("")}
                 <div class="pagination">
@@ -84,6 +87,21 @@ async function search() {
     } finally {
         loadingIndicator.style.display = "none";
     }
+}
+
+// Helper function to convert Google Drive links to direct links
+function convertGoogleDriveLink(link) {
+    if (!link.includes('drive.google.com')) {
+        return link; // Return non-Google Drive links as-is
+    }
+    const fileIdMatch = link.match(/file\/d\/([^\/]*)/);
+    return fileIdMatch ? `https://drive.google.com/uc?id=${fileIdMatch[1]}` : link;
+}
+
+// Helper function to highlight query in text
+function highlightQuery(text, query) {
+    const regex = new RegExp(query, 'gi');
+    return text.replace(regex, match => `<span class="highlight">${match}</span>`);
 }
 
 
