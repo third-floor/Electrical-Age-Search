@@ -19,15 +19,16 @@ async function search() {
             .map(row => {
                 const fields = row.split(',');
                 if (fields.length < 7) return null; // Skip malformed rows
-                const [year, , pageNumber, text, , , link] = fields;
+                const [year, , pageNumber, text, , , link] = fields; // Use correct indices based on headers
                 return { year, page: pageNumber, text, link };
             })
             .filter(entry => entry);
 
+        // Perform fuzzy search using Fuse.js
         const fuse = new Fuse(entries, {
-            keys: ['text'], 
+            keys: ['text'], // Search the 'text' field
             includeScore: true, 
-            threshold: 0.4
+            threshold: 0.4 // Adjust strictness of matching (lower = stricter)
         });
 
         const results = fuse.search(query).map(result => result.item);
@@ -42,6 +43,7 @@ async function search() {
         const resultsPerPage = 20;
         const totalPages = Math.ceil(totalResults / resultsPerPage);
 
+        // Function to render a page of results
         function renderPage(page) {
             const startIndex = (page - 1) * resultsPerPage;
             const endIndex = Math.min(startIndex + resultsPerPage, totalResults);
@@ -61,6 +63,7 @@ async function search() {
                 </div>
             `;
 
+            // Add pagination event listeners
             if (currentPage > 1) {
                 document.getElementById("prevPage").addEventListener("click", () => {
                     currentPage--;
@@ -86,7 +89,48 @@ async function search() {
     }
 }
 
+// Helper function to highlight search terms in results
 function highlightQuery(text, query) {
     const regex = new RegExp(query, 'gi');
     return text.replace(regex, match => `<span class="highlight">${match}</span>`);
+}
+
+async function loadTableOfContents() {
+    const tocContainer = document.getElementById("tocContainer");
+
+    try {
+        const response = await fetch('./csv/Table of Contents.csv');
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        const data = await response.text();
+        const rows = data.split('\n').filter(row => row.trim());
+        let currentIssue = null;
+        let html = '';
+
+        rows.forEach(row => {
+            const cols = row.split(',');
+            if (cols.length >= 6 && cols.slice(0, 5).every(col => col.trim())) {
+                if (currentIssue) {
+                    const [year, page] = currentIssueImageDetails;
+                    html += `<img src="./images/${year}_page_${page}.png" alt="Table of Contents Image" class="toc-image"></ul>`;
+                }
+                currentIssue = cols.slice(0, 5).join(', ');
+                currentIssueImageDetails = [cols[2].trim(), cols[3].trim()];
+                html += `<h2>${currentIssue}</h2><ul>`;
+            } else if (cols.length >= 6) {
+                const [title, author] = cols[5].split(';').map(item => item.trim());
+                html += `<li><strong>${title}</strong> - ${author || 'Unknown Author'}</li>`;
+            }
+        });
+
+        if (currentIssue) {
+            const [year, page] = currentIssueImageDetails;
+            html += `<img src="./images/${year}_page_${page}.png" alt="Table of Contents Image" class="toc-image"></ul>`;
+        }
+
+        tocContainer.innerHTML = html;
+    } catch (error) {
+        console.error("Error loading Table of Contents:", error);
+        tocContainer.innerHTML = "Failed to load Table of Contents.";
+    }
 }
