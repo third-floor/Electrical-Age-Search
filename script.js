@@ -19,16 +19,15 @@ async function search() {
             .map(row => {
                 const fields = row.split(',');
                 if (fields.length < 7) return null; // Skip malformed rows
-                const [year, , pageNumber, text, , , link] = fields; // Use correct indices based on headers
+                const [year, , pageNumber, text, , , link] = fields; // Correctly map CSV columns
                 return { year, page: pageNumber, text, link };
             })
             .filter(entry => entry);
 
-        // Perform fuzzy search using Fuse.js
         const fuse = new Fuse(entries, {
             keys: ['text'], // Search the 'text' field
             includeScore: true, 
-            threshold: 0.4 // Adjust strictness of matching (lower = stricter)
+            threshold: 0.4 // Adjust strictness of matching
         });
 
         const results = fuse.search(query).map(result => result.item);
@@ -43,7 +42,6 @@ async function search() {
         const resultsPerPage = 20;
         const totalPages = Math.ceil(totalResults / resultsPerPage);
 
-        // Function to render a page of results
         function renderPage(page) {
             const startIndex = (page - 1) * resultsPerPage;
             const endIndex = Math.min(startIndex + resultsPerPage, totalResults);
@@ -51,19 +49,21 @@ async function search() {
             const pageResults = results.slice(startIndex, endIndex);
             resultsDiv.innerHTML = `
                 <p>Found ${totalResults} results. Displaying ${startIndex + 1} - ${endIndex}.</p>
-                ${pageResults.map(entry => `
-                    <div class="result">
-                        <img src="${entry.link}" class="thumbnail" alt="Page Image" style="display: block; max-width: 200px; margin-bottom: 10px;">
-                        <p>${entry.year}, Page ${entry.page}: ${highlightQuery(entry.text, query)}</p>
-                    </div>
-                `).join("")}
+                ${pageResults.map(entry => {
+                    console.log(`Constructed Google Drive Link: ${entry.link}`);
+                    return `
+                        <div class="result">
+                            <img src="${entry.link}" class="thumbnail" alt="Page Image" style="display: block; max-width: 200px; margin-bottom: 10px;">
+                            <p>${entry.year}, Page ${entry.page}: ${highlightQuery(entry.text, query)}</p>
+                        </div>
+                    `;
+                }).join("")}
                 <div class="pagination">
                     ${currentPage > 1 ? '<button id="prevPage">Previous</button>' : ''}
                     ${currentPage < totalPages ? '<button id="nextPage">Next</button>' : ''}
                 </div>
             `;
 
-            // Add pagination event listeners
             if (currentPage > 1) {
                 document.getElementById("prevPage").addEventListener("click", () => {
                     currentPage--;
@@ -89,7 +89,6 @@ async function search() {
     }
 }
 
-// Helper function to highlight search terms in results
 function highlightQuery(text, query) {
     const regex = new RegExp(query, 'gi');
     return text.replace(regex, match => `<span class="highlight">${match}</span>`);
