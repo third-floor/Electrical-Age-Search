@@ -13,20 +13,31 @@ async function search() {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
-        const data = await response.text();
-        const rows = data.split('\n').slice(1); // Skip header row
-        const entries = rows
-            .map(row => {
-                const fields = row.split(',');
-                if (fields.length < 7) return null; // Skip malformed rows
-                const [year, , pageNumber, text, , , link] = fields; // Correctly map CSV columns
-                return { year, page: pageNumber, text, link };
-            })
-            .filter(entry => entry);
+        const csvData = await response.text();
+        const entries = [];
+
+        // Use Papa Parse to parse the CSV data
+        Papa.parse(csvData, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function (results) {
+                results.data.forEach(row => {
+                    // Ensure the "Link" column is extracted correctly
+                    if (row["Link"] && row["Text"]) {
+                        entries.push({
+                            year: row["Year"],
+                            page: row["Page Number"],
+                            text: row["Text"],
+                            link: row["Link"]
+                        });
+                    }
+                });
+            }
+        });
 
         const fuse = new Fuse(entries, {
             keys: ['text'], // Search the 'text' field
-            includeScore: true, 
+            includeScore: true,
             threshold: 0.4 // Adjust strictness of matching
         });
 
@@ -49,15 +60,12 @@ async function search() {
             const pageResults = results.slice(startIndex, endIndex);
             resultsDiv.innerHTML = `
                 <p>Found ${totalResults} results. Displaying ${startIndex + 1} - ${endIndex}.</p>
-                ${pageResults.map(entry => {
-                    console.log(`Constructed Google Drive Link: ${entry.link}`);
-                    return `
-                        <div class="result">
-                            <img src="${entry.link}" class="thumbnail" alt="Page Image" style="display: block; max-width: 200px; margin-bottom: 10px;">
-                            <p>${entry.year}, Page ${entry.page}: ${highlightQuery(entry.text, query)}</p>
-                        </div>
-                    `;
-                }).join("")}
+                ${pageResults.map(entry => `
+                    <div class="result">
+                        <img src="${entry.link}" class="thumbnail" alt="Page Image" style="display: block; max-width: 200px; margin-bottom: 10px;">
+                        <p>${entry.year}, Page ${entry.page}: ${highlightQuery(entry.text, query)}</p>
+                    </div>
+                `).join("")}
                 <div class="pagination">
                     ${currentPage > 1 ? '<button id="prevPage">Previous</button>' : ''}
                     ${currentPage < totalPages ? '<button id="nextPage">Next</button>' : ''}
