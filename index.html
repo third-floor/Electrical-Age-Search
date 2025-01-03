@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Journal Search</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script> <!-- Include Fuse.js -->
+    <!-- Include Fuse.js for search functionality -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
+    <!-- Include Papa Parse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
 <body>
     <header>
@@ -15,7 +18,9 @@
         <button onclick="window.location.href='toc.html'">Table of Contents</button>
     </header>
     <main>
+        <!-- Loading indicator -->
         <div id="loadingIndicator" style="display: none;">Loading...</div>
+        <!-- Results container -->
         <div id="results"></div>
     </main>
     <script src="script.js"></script>
